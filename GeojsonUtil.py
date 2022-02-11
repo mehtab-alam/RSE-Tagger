@@ -8,66 +8,39 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+locale = "IT"
+city = "Trieste"
+distanceNearBy = 0.8
+distanceSurrounding = 1.5
+
+
 base_path = "geojson"
 northMin = 337
 northMax = 22
-northMinVal = 360
-northMaxVal = 0
-northMinCoord = None
-northMaxCoord = None
 
 eastMin = 67
 eastMax = 112
-eastMinVal = 112
-eastMaxVal = 67
-eastMinCoord = None
-eastMaxCoord = None
 
 southMin = 157.5
 southMax = 202.5
-southMinVal = 202.5
-southMaxVal = 157.5
-southMinCoord = None
-southMaxCoord = None
 
 westMin = 247
 westMax = 292
-westMinVal = 292
-westMaxVal = 247
-westMinCoord = None
-westMaxCoord = None
 
 northEastMin = 22
 northEastMax = 67
-northEastMinVal = 67
-northEastMaxVal = 22
-northEastMinCoord = None
-northEastMaxCoord = None
-
 
 southEastMin = 112
 southEastMax = 157
-southEastMinVal = 157
-southEastMaxVal = 112
-southEastMinCoord = None
-southEastMaxCoord = None
-
 
 northWestMin = 292
 northWestMax = 337
-northWestMinVal = 337
-northWestMaxVal = 292
-northWestMinCoord = None
-northWestMaxCoord = None
-
 
 southWestMin = 202
 southWestMax = 247
-southWestMinVal = 247
-southWestMaxVal = 202
-southWestMinCoord = None
-southWestMaxCoord = None
 
+nearby = []
+surrounding = []
 north = []
 south = []
 east = []
@@ -137,14 +110,37 @@ def midpoint(x1, y1, x2, y2, angle):
     longitude = round(math.degrees(lonC),6)
     return [latitude, longitude, angle]
 
+def getPointByDistanceAngle(lat, ln, angle, distanceInKm):
 
-def setGeoJson(arr, id, centroid, path, cardinal):
+    R = 6378.1 #Radius of the Earth
+    brng = angle * math.pi /180 #Bearing is 90 degrees converted to radians.
+    d = distanceInKm #Distance in km
+    
+    #lat2  52.20444 - the lat result I'm hoping for
+    #lon2  0.36056 - the long result I'm hoping for.
+    
+    lat1 = math.radians(lat) #Current lat point converted to radians
+    lon1 = math.radians(ln) #Current long point converted to radians
+    
+    lat2 = math.asin( math.sin(lat1)*math.cos(d/R) +
+         math.cos(lat1)*math.sin(d/R)*math.cos(brng))
+    
+    lon2 = lon1 + math.atan2(math.sin(brng)*math.sin(d/R)*math.cos(lat1),
+                 math.cos(d/R)-math.sin(lat1)*math.sin(lat2))
+    
+    lat2 = math.degrees(lat2)
+    lon2 = math.degrees(lon2)
+    
+    return (lon2, lat2, angle)
+
+def setGeoJson(arr, arrOriginal, id, centroid, path, cardinal):
     cardinal_json = {}
     cardinal_json['type'] = 'FeatureCollection'
     cardinal_json['features'] = []
     coordinates_cardinal= []
     coordinates_cardinal.append(arr)
-
+    if arrOriginal is not None:
+        coordinates_cardinal.append(arrOriginal)
     cardinal_json['features'].append({
     'type':'Feature',
     'id': id,
@@ -162,11 +158,10 @@ def setGeoJson(arr, id, centroid, path, cardinal):
 
 centroid = (3.8767337,43.6112422)
 df = pd.read_csv('cities.csv')
-df = df.loc[(df['country'] == 'FR') & (df['name'] == 'Paris')]
+df = df.loc[(df['country'] == locale) & (df['name'] == city)]
 for index, row in df.iterrows():
     path = ensure_dir(row['country'], row['name'], False)
     request_url = 'https://nominatim.openstreetmap.org/search.php?q='+row['name'].lower()+'&polygon_geojson=1&accept-language=en&format=jsonv2'
-    #print(request_url)
     page = requests.get(request_url, verify=False)
     json_content = json.loads(page.content)
     if len(json_content) > 0:
@@ -179,15 +174,19 @@ for index, row in df.iterrows():
                 all_coordinates.extend(coordinate[0])
         else:
             all_coordinates = json_content[0]['geojson']['coordinates'][0] 
-        #print("Polygon:"+str(all_coordinates))    
+         
         for p in all_coordinates:
             p2 = (p[0], p[1])
             angle = calculate_bearing(centroid, p2)
             p.append(angle)
-            northMin = 337
-            northMax = 22
-            northMinVal = 360
-            northMaxVal = 0
+            
+            nearPoint = getPointByDistanceAngle(p[1], p[0], angle, distanceNearBy)
+            nearby.append(nearPoint)
+            
+            surroundingPoint = getPointByDistanceAngle(p[1], p[0], angle, distanceSurrounding)
+            surrounding.append(surroundingPoint)
+            
+            
             if angle >= northMin or angle <= northMax:
                 north.append(p)
             if angle >= southMin and angle <= southMax:
@@ -265,17 +264,18 @@ centeral.append(p1South)
 centeral.append(p2East)
 centeral.append(p1East)
 
-setGeoJson(north, json_content[0]['place_id'],centroid, path, 'north')
-setGeoJson(south, json_content[0]['place_id'],centroid, path, 'south')
-setGeoJson(east, json_content[0]['place_id'],centroid, path, 'east')
-setGeoJson(west, json_content[0]['place_id'],centroid, path, 'west')
-setGeoJson(northEast, json_content[0]['place_id'],centroid, path, 'north-east')
-setGeoJson(southEast, json_content[0]['place_id'],centroid, path, 'south-east')
-setGeoJson(southWest, json_content[0]['place_id'],centroid, path, 'south-west')
-setGeoJson(northWest, json_content[0]['place_id'],centroid, path, 'north-west')
+setGeoJson(north, None, json_content[0]['place_id'],centroid, path, 'north')
+setGeoJson(south, None,json_content[0]['place_id'],centroid, path, 'south')
+setGeoJson(east, None,json_content[0]['place_id'],centroid, path, 'east')
+setGeoJson(west, None,json_content[0]['place_id'],centroid, path, 'west')
+setGeoJson(northEast, None,json_content[0]['place_id'],centroid, path, 'north-east')
+setGeoJson(southEast, None,json_content[0]['place_id'],centroid, path, 'south-east')
+setGeoJson(southWest, None,json_content[0]['place_id'],centroid, path, 'south-west')
+setGeoJson(northWest, None,json_content[0]['place_id'],centroid, path, 'north-west')
         
-setGeoJson(centeral, json_content[0]['place_id'],centroid, path, 'centeral')
-        
+setGeoJson(centeral, None, json_content[0]['place_id'],centroid, path, 'centeral')
+setGeoJson(nearby, all_coordinates, json_content[0]['place_id'],centroid, path, 'nearby')
+setGeoJson(surrounding, all_coordinates, json_content[0]['place_id'],centroid, path, 'surrounding')     
         
         
 
