@@ -9,9 +9,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 locale = "IT"
-city = "Trieste"
-distanceNearBy = 0.8
-distanceSurrounding = 1.5
+city = "Milan"
+
 
 
 base_path = "geojson"
@@ -50,6 +49,30 @@ southEast = []
 northWest = []
 southWest = []
 centeral = []
+
+
+def ConvertToRadian(input):
+    return input * math.pi / 180
+
+
+def calculateArea(coordinates):
+    
+    area = 0
+
+    if (len(coordinates) > 2):
+        i = 0
+        for i in range(len(coordinates) - 1):
+            p1 = coordinates[i]
+            p2 = coordinates[i + 1]
+            area += ConvertToRadian(p2[0] - p1[0]) * (2 + math.sin(ConvertToRadian(p1[1])) + math.sin(ConvertToRadian(p2[0])))
+        
+        
+        area = area * 6378137 * 6378137 / 1000000
+    
+    area = abs(round(area, 2)) + 2
+    
+    return area
+    
 
 def calculate_bearing(pointA, pointB):
   
@@ -174,15 +197,24 @@ for index, row in df.iterrows():
                 all_coordinates.extend(coordinate[0])
         else:
             all_coordinates = json_content[0]['geojson']['coordinates'][0] 
-         
+        area = calculateArea(all_coordinates)
+        print("Area:"+ str(area)) 
+        if area > 70:
+            distanceNearBy = area *0.006
+            distanceSurrounding = area *0.012
+        else:
+            distanceNearBy = area *0.01
+            distanceSurrounding = area *0.02
+    
+        print("Nearby Distance:"+ str(distanceNearBy)) 
+        print("Surrounding Distance:"+ str(distanceSurrounding)) 
+                
         for p in all_coordinates:
             p2 = (p[0], p[1])
             angle = calculate_bearing(centroid, p2)
             p.append(angle)
-            
             nearPoint = getPointByDistanceAngle(p[1], p[0], angle, distanceNearBy)
             nearby.append(nearPoint)
-            
             surroundingPoint = getPointByDistanceAngle(p[1], p[0], angle, distanceSurrounding)
             surrounding.append(surroundingPoint)
             

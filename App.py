@@ -16,7 +16,7 @@ import os
 
 print("streamlit=="+st.__version__)
 print("folium=="+folium.__version__)
-
+st.title("GeoTag - RSI Tagging")
 list_country = os.listdir('geojson')
 try:
     list_country.remove('.DS_Store')
@@ -57,6 +57,7 @@ if st.button('Draw Location'):
                                         zoom_start = 11)
         folium.GeoJson(
             path,
+            smooth_factor=1,
             style_function = lambda x: {
                 'fillColor': 'green',
                 'color': 'black',
