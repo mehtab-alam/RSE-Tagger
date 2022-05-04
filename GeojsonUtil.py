@@ -8,8 +8,8 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-locale = "IT"
-city = "Milan"
+locale = "GB"
+city = "London"
 
 
 
@@ -184,19 +184,23 @@ df = pd.read_csv('cities.csv')
 df = df.loc[(df['country'] == locale) & (df['name'] == city)]
 for index, row in df.iterrows():
     path = ensure_dir(row['country'], row['name'], False)
-    request_url = 'https://nominatim.openstreetmap.org/search.php?q='+row['name'].lower()+'&polygon_geojson=1&accept-language=en&format=jsonv2'
+    request_url = 'https://nominatim.openstreetmap.org/search.php?q='+row['name'].lower()+'&country='+locale.lower()+'&polygon_geojson=1&accept-language=en&format=jsonv2'
     page = requests.get(request_url, verify=False)
+    print(request_url)
     json_content = json.loads(page.content)
     if len(json_content) > 0:
-        centroid = (float(json_content[0]['lon']), float(json_content[0]['lat']))
+        index = 0
+        while json_content[index]['geojson']['type'] == 'Point':
+            index =index+1
+        centroid = (float(json_content[index]['lon']), float(json_content[0]['lat']))
         print(str(centroid))
         all_coordinates = []
-        print(json_content[0]['geojson']['type'])
-        if json_content[0]['geojson']['type'] == 'MultiPolygon':
-            for coordinate in json_content[0]['geojson']['coordinates']:
+        print(json_content[index]['geojson']['type'])
+        if json_content[index]['geojson']['type'] == 'MultiPolygon':
+            for coordinate in json_content[index]['geojson']['coordinates']:
                 all_coordinates.extend(coordinate[0])
         else:
-            all_coordinates = json_content[0]['geojson']['coordinates'][0] 
+            all_coordinates = json_content[index]['geojson']['coordinates'][0] 
         area = calculateArea(all_coordinates)
         print("Area:"+ str(area)) 
         if area > 70:
