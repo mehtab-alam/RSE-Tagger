@@ -11,7 +11,9 @@ Geotag is a Python command-line application to identify the geographical coordin
 ![Process Pipeline](rsi_process_pipeline_latest.png)
 
 ## Configuration
-Change the **line # 11** and **line # 12** in the code for which you want to identify the spatial relations
+- List of the available countries and cities with their supported spelling are available in the corresponding .csv files (cities.csv, countries.csv).
+
+Change the **line # 11** and **line # 12** in **GeojsonUtil.py** for the city you want to identify the spatial relations
 
 **Default**
 ```python
@@ -31,7 +33,7 @@ city = "Nice"
 To run the Python console application to identify the coordinates of configured location in previous step. Follow the below step
 
 ```
-python GeojsonUtil.py
+python3 GeojsonUtil.py
 ```
 
 ## Output 
@@ -68,7 +70,11 @@ pip install folium
 ```sh
 pip install streamlit-folium
 ```
+4. Finally, run the Geotag Visualizer web application 
 
+```
+streamlit run App.py
+```
 
 ## Examples
 
